@@ -1,0 +1,55 @@
+{
+  "users": {
+    "UID_admin":    { "role": "admin" },
+    "UID_worker_1": { "role": "worker", "boxType": "nettoyage",   "boxId": "1"  },
+    "UID_worker_2": { "role": "worker", "boxType": "nettoyage",   "boxId": "2"  },
+    "UID_worker_3": { "role": "worker", "boxType": "nettoyage",   "boxId": "3"  },
+    "UID_worker_4": { "role": "worker", "boxType": "nettoyage",   "boxId": "4"  },
+    "UID_worker_5": { "role": "worker", "boxType": "nettoyage",   "boxId": "5"  },
+    "UID_worker_6": { "role": "worker", "boxType": "nettoyage",   "boxId": "6"  },
+    "UID_worker_7": { "role": "worker", "boxType": "nettoyage",   "boxId": "7"  },
+    "UID_worker_8": { "role": "worker", "boxType": "nettoyage",   "boxId": "8"  },
+    "UID_worker_9": { "role": "worker", "boxType": "nettoyage",   "boxId": "9"  },
+    "UID_worker_10":{ "role": "worker", "boxType": "nettoyage",   "boxId": "10" },
+    "UID_worker_11":{ "role": "worker", "boxType": "nettoyage",   "boxId": "11" },
+    "UID_worker_12":{ "role": "worker", "boxType": "nettoyage",   "boxId": "12" },
+    "UID_worker_13":{ "role": "worker", "boxType": "gardiennage", "boxId": "1"  },
+    "UID_worker_14":{ "role": "worker", "boxType": "gardiennage", "boxId": "2"  },
+    "UID_worker_15":{ "role": "worker", "boxType": "gardiennage", "boxId": "3"  },
+    "UID_worker_16":{ "role": "worker", "boxType": "gardiennage", "boxId": "4"  },
+    "UID_worker_17":{ "role": "worker", "boxType": "gardiennage", "boxId": "5"  },
+    "UID_worker_18":{ "role": "worker", "boxType": "gardiennage", "boxId": "6"  },
+    "UID_worker_19":{ "role": "worker", "boxType": "gardiennage", "boxId": "7"  },
+    "UID_worker_20":{ "role": "worker", "boxType": "gardiennage", "boxId": "8"  },
+    "UID_worker_21":{ "role": "worker", "boxType": "gardiennage", "boxId": "9"  },
+    "UID_worker_22":{ "role": "worker", "boxType": "gardiennage", "boxId": "10" }
+  },
+  "boxes": {
+    "nettoyage": {
+      "1":  { "label": "Nettoyage 1" },
+      "2":  { "label": "Nettoyage 2" },
+      "3":  { "label": "Nettoyage 3" },
+      "4":  { "label": "Nettoyage 4" },
+      "5":  { "label": "Nettoyage 5" },
+      "6":  { "label": "Nettoyage 6" },
+      "7":  { "label": "Nettoyage 7" },
+      "8":  { "label": "Nettoyage 8" },
+      "9":  { "label": "Nettoyage 9" },
+      "10": { "label": "Nettoyage 10" },
+      "11": { "label": "Nettoyage 11" },
+      "12": { "label": "Nettoyage 12" }
+    },
+    "gardiennage": {
+      "1":  { "label": "Gardiennage 1" },
+      "2":  { "label": "Gardiennage 2" },
+      "3":  { "label": "Gardiennage 3" },
+      "4":  { "label": "Gardiennage 4" },
+      "5":  { "label": "Gardiennage 5" },
+      "6":  { "label": "Gardiennage 6" },
+      "7":  { "label": "Gardiennage 7" },
+      "8":  { "label": "Gardiennage 8" },
+      "9":  { "label": "Gardiennage 9" },
+      "10": { "label": "Gardiennage 10" }
+    }
+  }
+}
