@@ -29,7 +29,7 @@ initializeApp(firebaseConfig);
 const auth = getAuth();
 const db   = getDatabase();
 
-// ---- DOM refs ----
+// ---- DOM references ----
 const loginPage      = document.getElementById('login-page');
 const adminPage      = document.getElementById('admin-page');
 const workerPage     = document.getElementById('worker-page');
@@ -52,25 +52,28 @@ const statusTableBody= document.querySelector('#status-table tbody');
 const workerBoxLabel = document.getElementById('worker-box-label');
 const workerSections = document.getElementById('worker-sections');
 
-// ---- Helpers ----
+// ---- Helper to show a page ----
 function showPage(pg) {
   [loginPage, adminPage, workerPage, boxEditorPage]
     .forEach(el => el.classList.add('d-none'));
   pg.classList.remove('d-none');
 }
 
-// ---- Auth state ----
+// ---- Auth state listener ----
 onAuthStateChanged(auth, user => {
   if (!user) return showPage(loginPage);
   onValue(ref(db, `users/${user.uid}`), snap => {
     const data = snap.val();
     if (data?.role === 'admin') initAdmin();
     else if (data?.role === 'worker') initWorker(data);
-    else { signOut(auth); alert('No role assigned'); }
+    else {
+      signOut(auth);
+      alert('No role assigned');
+    }
   });
 });
 
-// ---- Login ----
+// ---- Login handler ----
 loginForm.addEventListener('submit', e => {
   e.preventDefault();
   loginErr.classList.add('d-none');
@@ -94,8 +97,8 @@ function initAdmin() {
   ['nettoyage','gardiennage'].forEach(type => {
     const container = document.getElementById(`${type}-boxes`);
     document.getElementById(`add-${type}`).onclick = () => {
-      const id = Date.now().toString(),
-            label = prompt('Box label:');
+      const id = Date.now().toString();
+      const label = prompt('Box label:');
       if (label) set(ref(db, `boxes/${type}/${id}`), { label });
     };
     onValue(ref(db, `boxes/${type}`), snap => {
@@ -123,6 +126,7 @@ function initAdmin() {
 
 // ---- Box Editor & Status ----
 let currentBox = {};
+
 function openBoxEditor(type, id, label) {
   currentBox = { type, id, label };
   editorTitle.textContent = `${label} (${type})`;
@@ -151,57 +155,65 @@ function openBoxEditor(type, id, label) {
 backAdminBtn.onclick = () => showPage(adminPage);
 
 saveBoxTasksBtn.onclick = async () => {
-  const { type,id } = currentBox;
-  const usnap = await get(ref(db,'users'));
-  const users = usnap.val()||{};
-  editorSections.querySelectorAll('.col-md-4').forEach((col,i)=>{
+  const { type, id } = currentBox;
+  const usnap = await get(ref(db, 'users'));
+  const users = usnap.val() || {};
+
+  editorSections.querySelectorAll('.col-md-4').forEach((col, i) => {
     const section = ['PV','BT','Congé'][i];
     const desc   = col.querySelector('.desc').value;
     const remain = +col.querySelector('.remain').value;
-    for(const uid in users){
+    for (const uid in users) {
       const u = users[uid];
-      if(u.role==='worker' && u.boxType===type && u.boxId===id){
-        update(ref(db,`tasks/${uid}/${section}`),{description:desc,remaining:remain,done:false});
+      if (u.role === 'worker' && u.boxType === type && u.boxId === id) {
+        update(ref(db, `tasks/${uid}/${section}`), {
+          description: desc,
+          remaining: remain,
+          done: false
+        });
       }
     }
   });
+
   saveSuccess.classList.remove('d-none');
-  setTimeout(()=>saveSuccess.classList.add('d-none'),1500);
+  setTimeout(() => saveSuccess.classList.add('d-none'), 1500);
   loadStatus();
 };
 
 async function loadStatus() {
-  const { type,id } = currentBox;
+  const { type, id } = currentBox;
   statusTableBody.innerHTML = '';
-  const usnap = await get(ref(db,'users'));
-  const users = usnap.val()||{};
-  for(const uid in users){
+  const usnap = await get(ref(db, 'users'));
+  const users = usnap.val() || {};
+
+  for (const uid in users) {
     const u = users[uid];
-    if(u.role==='worker' && u.boxType===type && u.boxId===id){
-      const tsnap = await get(ref(db,`tasks/${uid}`));
-      const tasks = tsnap.val()||{};
+    if (u.role === 'worker' && u.boxType === type && u.boxId === id) {
+      const tsnap = await get(ref(db, `tasks/${uid}`));
+      const tasks = tsnap.val() || {};
       const row = document.createElement('tr');
 
-      // Name
+      // Name column
       const nameCell = document.createElement('td');
       const nameInput = document.createElement('input');
       nameInput.type = 'text';
-      nameInput.value = u.name||'';
+      nameInput.value = u.name || '';
       nameInput.className = 'form-control form-control-sm';
-      nameInput.onchange = () => update(ref(db, `users/${uid}`), { name: nameInput.value });
+      nameInput.onchange = () =>
+        update(ref(db, `users/${uid}`), { name: nameInput.value });
       nameCell.appendChild(nameInput);
       row.appendChild(nameCell);
 
-      // Phone
+      // Phone column
       const phoneCell = document.createElement('td');
       const phoneInput = document.createElement('input');
       phoneInput.type = 'tel';
-      phoneInput.value = u.phone||'';
+      phoneInput.value = u.phone || '';
       phoneInput.className = 'form-control form-control-sm d-inline-block w-auto';
       const callLink = document.createElement('a');
       callLink.className = 'btn btn-sm btn-outline-success ms-2';
       callLink.textContent = '📞';
-      callLink.href = `tel:${u.phone||''}`;
+      callLink.href = `tel:${u.phone || ''}`;
       phoneInput.onchange = () => {
         update(ref(db, `users/${uid}`), { phone: phoneInput.value });
         callLink.href = `tel:${phoneInput.value}`;
@@ -209,7 +221,7 @@ async function loadStatus() {
       phoneCell.append(phoneInput, callLink);
       row.appendChild(phoneCell);
 
-      // PV, BT, Congé
+      // Done columns
       ['PV','BT','Congé'].forEach(section => {
         const cell = document.createElement('td');
         cell.textContent = tasks[section]?.done ? '✅' : '〰️';
@@ -221,11 +233,12 @@ async function loadStatus() {
   }
 }
 
-// ---- Worker Dashboard ----
+// ---- Worker Dashboard (edited) ----
 async function initWorker(user) {
-  // Fetch the current label
   const boxSnap = await get(ref(db, `boxes/${user.boxType}/${user.boxId}`));
-  const boxLabel = boxSnap.exists() ? boxSnap.val().label : `${user.boxType} Box ${user.boxId}`;
+  const boxLabel = boxSnap.exists()
+    ? boxSnap.val().label
+    : `${user.boxType} Box ${user.boxId}`;
 
   showPage(workerPage);
   workerBoxLabel.textContent = boxLabel;
@@ -233,29 +246,70 @@ async function initWorker(user) {
 
   onValue(ref(db, `tasks/${auth.currentUser.uid}`), snap => {
     workerSections.innerHTML = '';
+
     ['PV','BT','Congé'].forEach(section => {
       const data = snap.val()?.[section] || {};
       const col = document.createElement('div');
       col.className = 'col-md-4 mb-4';
-      col.innerHTML = `
-        <div class="card h-100 shadow-sm fade-in">
-          <div class="card-header text-center fw-bold">${section}</div>
-          <div class="card-body">
-            <label>Description</label>
-            <input type="text" class="form-control desc" value="${data.description||''}">
-            <label class="mt-2">Remaining</label>
-            <input type="number" class="form-control remain" value="${data.remaining||0}">
-            <div class="form-check mt-3">
-              <input type="checkbox" class="form-check-input done" ${data.done?'checked':''}>
-              <label class="form-check-label">Done</label>
-            </div>
+
+      let inner = `<div class="card h-100 shadow-sm fade-in">
+        <div class="card-header text-center fw-bold">${section}</div>
+        <div class="card-body">
+          <div class="mb-2">
+            <label class="form-label">Description</label>
+            <input type="text" class="form-control desc" value="${data.description || ''}">
           </div>
-        </div>`;
+          <div class="mb-2">
+            <label class="form-label">Remaining</label>
+            <input type="number" class="form-control remain" value="${data.remaining || 0}">
+          </div>`;
+
+      if (section === 'PV') {
+        inner += `
+          <div class="mb-2">
+            <label class="form-label">Entrée</label>
+            <input type="time" class="form-control entryTime" value="${data.entryTime || ''}">
+          </div>
+          <div class="mb-2">
+            <label class="form-label">Sortie</label>
+            <input type="time" class="form-control exitTime" value="${data.exitTime || ''}">
+          </div>`;
+      } else if (section === 'BT') {
+        inner += `
+          <div class="mb-2">
+            <label class="form-label">Sortie</label>
+            <input type="time" class="form-control exitTime" value="${data.exitTime || ''}">
+          </div>`;
+      }
+
+      inner += `
+          <div class="form-check mt-3">
+            <input type="checkbox" class="form-check-input done" ${data.done ? 'checked' : ''}>
+            <label class="form-check-label">Done</label>
+          </div>
+        </div>
+      </div>`;
+
+      col.innerHTML = inner;
       workerSections.appendChild(col);
+
       setTimeout(() => {
-        col.querySelector('.desc').onchange   = e => update(ref(db, `tasks/${auth.currentUser.uid}/${section}`), { description: e.target.value });
-        col.querySelector('.remain').onchange = e => update(ref(db, `tasks/${auth.currentUser.uid}/${section}`), { remaining: +e.target.value });
-        col.querySelector('.done').onchange   = e => update(ref(db, `tasks/${auth.currentUser.uid}/${section}`), { done: e.target.checked });
+        col.querySelector('.desc').onchange   = e =>
+          update(ref(db, `tasks/${auth.currentUser.uid}/${section}`), { description: e.target.value });
+        col.querySelector('.remain').onchange = e =>
+          update(ref(db, `tasks/${auth.currentUser.uid}/${section}`), { remaining: +e.target.value });
+        col.querySelector('.done').onchange   = e =>
+          update(ref(db, `tasks/${auth.currentUser.uid}/${section}`), { done: e.target.checked });
+
+        if (section === 'PV') {
+          col.querySelector('.entryTime').onchange = e =>
+            update(ref(db, `tasks/${auth.currentUser.uid}/${section}`), { entryTime: e.target.value });
+          col.querySelector('.exitTime').onchange  = e =>
+            update(ref(db, `tasks/${auth.currentUser.uid}/${section}`), { exitTime: e.target.value });
+        } else if (section === 'BT') {
+          col.querySelector('.exitTime').onchange  = e =>
+            update(ref(db, `tasks/${auth.currentUser.uid}/${section}`), { exitTime: e.target.value });
+        }
       }, 50);
     });
   });
