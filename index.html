@@ -25,11 +25,11 @@
         <form id="loginForm">
           <div class="mb-3">
             <label for="email" class="form-label">Email</label>
-            <input id="email" type="email" class="form-control" required autofocus>
+            <input id="email" name="email" type="email" class="form-control" required autofocus>
           </div>
           <div class="mb-3">
             <label for="password" class="form-label">Password</label>
-            <input id="password" type="password" class="form-control" required>
+            <input id="password" name="password" type="password" class="form-control" required>
           </div>
           <button type="submit" class="btn btn-primary w-100 fw-bold">Login</button>
         </form>
@@ -72,7 +72,11 @@
         <table class="table table-sm table-bordered" id="status-table">
           <thead class="table-light">
             <tr>
-              <th>Worker</th><th>PV Done</th><th>BT Done</th><th>Congé Done</th>
+              <th>Name</th>
+              <th>Phone</th>
+              <th>PV Done</th>
+              <th>BT Done</th>
+              <th>Congé Done</th>
             </tr>
           </thead>
           <tbody></tbody>

@@ -15,7 +15,7 @@ import {
   get
 } from 'https://www.gstatic.com/firebasejs/9.22.2/firebase-database.js';
 
-// Firebase config
+// ---- Firebase config ----
 const firebaseConfig = {
   apiKey: "AIzaSyD0vilgJtiLB06OrJq1iv3A6NXbEan6j_Y",
   authDomain: "kicknegooss.firebaseapp.com",
@@ -29,7 +29,7 @@ initializeApp(firebaseConfig);
 const auth = getAuth();
 const db   = getDatabase();
 
-// DOM elements
+// ---- DOM refs ----
 const loginPage      = document.getElementById('login-page');
 const adminPage      = document.getElementById('admin-page');
 const workerPage     = document.getElementById('worker-page');
@@ -52,13 +52,14 @@ const statusTableBody= document.querySelector('#status-table tbody');
 const workerBoxLabel = document.getElementById('worker-box-label');
 const workerSections = document.getElementById('worker-sections');
 
-// Helper to show one page
+// ---- Helpers ----
 function showPage(pg) {
-  [loginPage, adminPage, workerPage, boxEditorPage].forEach(el => el.classList.add('d-none'));
+  [loginPage, adminPage, workerPage, boxEditorPage]
+    .forEach(el => el.classList.add('d-none'));
   pg.classList.remove('d-none');
 }
 
-// Auth listener
+// ---- Auth state ----
 onAuthStateChanged(auth, user => {
   if (!user) return showPage(loginPage);
   onValue(ref(db, `users/${user.uid}`), snap => {
@@ -69,29 +70,32 @@ onAuthStateChanged(auth, user => {
   });
 });
 
-// Login handler
+// ---- Login ----
 loginForm.addEventListener('submit', e => {
   e.preventDefault();
   loginErr.classList.add('d-none');
-  signInWithEmailAndPassword(auth, loginForm.email.value, loginForm.password.value)
-    .catch(err => {
-      loginErr.textContent = err.message;
-      loginErr.classList.remove('d-none');
-    });
+  signInWithEmailAndPassword(auth,
+    loginForm.email.value,
+    loginForm.password.value
+  ).catch(err => {
+    loginErr.textContent = err.message;
+    loginErr.classList.remove('d-none');
+  });
 });
 
-// Logout/back handlers
+// ---- Logout/Back handlers ----
 if (adminLogout)  adminLogout.onclick  = () => signOut(auth);
 if (workerLogout) workerLogout.onclick = () => signOut(auth);
 if (workerBack)   workerBack.onclick   = () => signOut(auth);
 
-// — Admin Dashboard —
+// ---- Admin Dashboard ----
 function initAdmin() {
   showPage(adminPage);
   ['nettoyage','gardiennage'].forEach(type => {
     const container = document.getElementById(`${type}-boxes`);
     document.getElementById(`add-${type}`).onclick = () => {
-      const id = Date.now().toString(), label = prompt('Box label:');
+      const id = Date.now().toString(),
+            label = prompt('Box label:');
       if (label) set(ref(db, `boxes/${type}/${id}`), { label });
     };
     onValue(ref(db, `boxes/${type}`), snap => {
@@ -109,21 +113,23 @@ function initAdmin() {
           e.stopPropagation();
           if (confirm('Delete?')) remove(ref(db, `boxes/${type}/${id}`));
         };
-        tpl.querySelector('.card-body').onclick = () => openBoxEditor(type,id,data.label);
+        tpl.querySelector('.card-body').onclick = () =>
+          openBoxEditor(type, id, data.label);
         container.appendChild(tpl);
       });
     });
   });
 }
 
-// — Box Editor & Status —
+// ---- Box Editor & Status ----
 let currentBox = {};
-function openBoxEditor(type,id,label) {
-  currentBox = { type,id,label };
+function openBoxEditor(type, id, label) {
+  currentBox = { type, id, label };
   editorTitle.textContent = `${label} (${type})`;
   editorSections.innerHTML = '';
   saveSuccess.classList.add('d-none');
   statusTableBody.innerHTML = '';
+
   ['PV','BT','Congé'].forEach(section => {
     const col = document.createElement('div');
     col.className = 'col-md-4 mb-4';
@@ -137,6 +143,7 @@ function openBoxEditor(type,id,label) {
       </div>`;
     editorSections.appendChild(col);
   });
+
   showPage(boxEditorPage);
   loadStatus();
 }
@@ -163,7 +170,7 @@ saveBoxTasksBtn.onclick = async () => {
   loadStatus();
 };
 
-async function loadStatus(){
+async function loadStatus() {
   const { type,id } = currentBox;
   statusTableBody.innerHTML = '';
   const usnap = await get(ref(db,'users'));
@@ -174,26 +181,60 @@ async function loadStatus(){
       const tsnap = await get(ref(db,`tasks/${uid}`));
       const tasks = tsnap.val()||{};
       const row = document.createElement('tr');
-      row.innerHTML = `
-        <td>${u.email||uid}</td>
-        <td>${tasks.PV?.done?'✅':'〰️'}</td>
-        <td>${tasks.BT?.done?'✅':'〰️'}</td>
-        <td>${tasks['Congé']?.done?'✅':'〰️'}</td>
-      `;
+
+      // Name
+      const nameCell = document.createElement('td');
+      const nameInput = document.createElement('input');
+      nameInput.type = 'text';
+      nameInput.value = u.name||'';
+      nameInput.className = 'form-control form-control-sm';
+      nameInput.onchange = () => update(ref(db, `users/${uid}`), { name: nameInput.value });
+      nameCell.appendChild(nameInput);
+      row.appendChild(nameCell);
+
+      // Phone
+      const phoneCell = document.createElement('td');
+      const phoneInput = document.createElement('input');
+      phoneInput.type = 'tel';
+      phoneInput.value = u.phone||'';
+      phoneInput.className = 'form-control form-control-sm d-inline-block w-auto';
+      const callLink = document.createElement('a');
+      callLink.className = 'btn btn-sm btn-outline-success ms-2';
+      callLink.textContent = '📞';
+      callLink.href = `tel:${u.phone||''}`;
+      phoneInput.onchange = () => {
+        update(ref(db, `users/${uid}`), { phone: phoneInput.value });
+        callLink.href = `tel:${phoneInput.value}`;
+      };
+      phoneCell.append(phoneInput, callLink);
+      row.appendChild(phoneCell);
+
+      // PV, BT, Congé
+      ['PV','BT','Congé'].forEach(section => {
+        const cell = document.createElement('td');
+        cell.textContent = tasks[section]?.done ? '✅' : '〰️';
+        row.appendChild(cell);
+      });
+
       statusTableBody.appendChild(row);
     }
   }
 }
 
-// — Worker Dashboard —
-function initWorker(user){
+// ---- Worker Dashboard ----
+async function initWorker(user) {
+  // Fetch the current label
+  const boxSnap = await get(ref(db, `boxes/${user.boxType}/${user.boxId}`));
+  const boxLabel = boxSnap.exists() ? boxSnap.val().label : `${user.boxType} Box ${user.boxId}`;
+
   showPage(workerPage);
-  workerBoxLabel.textContent = `${user.boxType.toUpperCase()} Box ${user.boxId}`;
+  workerBoxLabel.textContent = boxLabel;
   workerSections.innerHTML = '';
-  onValue(ref(db,`tasks/${auth.currentUser.uid}`),snap=>{
+
+  onValue(ref(db, `tasks/${auth.currentUser.uid}`), snap => {
     workerSections.innerHTML = '';
-    ['PV','BT','Congé'].forEach(section=>{
-      const data = snap.val()?.[section]||{};
+    ['PV','BT','Congé'].forEach(section => {
+      const data = snap.val()?.[section] || {};
       const col = document.createElement('div');
       col.className = 'col-md-4 mb-4';
       col.innerHTML = `
@@ -211,16 +252,14 @@ function initWorker(user){
           </div>
         </div>`;
       workerSections.appendChild(col);
-      setTimeout(()=>{
-        const descEl = col.querySelector('.desc');
-        const remEl  = col.querySelector('.remain');
-        const doneEl = col.querySelector('.done');
-        descEl.onchange = ()=>update(ref(db,`tasks/${auth.currentUser.uid}/${section}`),{description:descEl.value});
-        remEl.onchange  = ()=>update(ref(db,`tasks/${auth.currentUser.uid}/${section}`),{remaining:+remEl.value});
-        doneEl.onchange = ()=>update(ref(db,`tasks/${auth.currentUser.uid}/${section}`),{done:doneEl.checked});
-      },50);
+      setTimeout(() => {
+        col.querySelector('.desc').onchange   = e => update(ref(db, `tasks/${auth.currentUser.uid}/${section}`), { description: e.target.value });
+        col.querySelector('.remain').onchange = e => update(ref(db, `tasks/${auth.currentUser.uid}/${section}`), { remaining: +e.target.value });
+        col.querySelector('.done').onchange   = e => update(ref(db, `tasks/${auth.currentUser.uid}/${section}`), { done: e.target.checked });
+      }, 50);
     });
   });
 }
+
 
 
