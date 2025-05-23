@@ -233,8 +233,9 @@ async function loadStatus() {
   }
 }
 
-// ---- Worker Dashboard (edited) ----
+// ---- Worker Dashboard (with date pickers) ----
 async function initWorker(user) {
+  // Fetch box label
   const boxSnap = await get(ref(db, `boxes/${user.boxType}/${user.boxId}`));
   const boxLabel = boxSnap.exists()
     ? boxSnap.val().label
@@ -252,6 +253,7 @@ async function initWorker(user) {
       const col = document.createElement('div');
       col.className = 'col-md-4 mb-4';
 
+      // Build card with date inputs
       let inner = `<div class="card h-100 shadow-sm fade-in">
         <div class="card-header text-center fw-bold">${section}</div>
         <div class="card-body">
@@ -268,17 +270,17 @@ async function initWorker(user) {
         inner += `
           <div class="mb-2">
             <label class="form-label">Entrée</label>
-            <input type="time" class="form-control entryTime" value="${data.entryTime || ''}">
+            <input type="date" class="form-control entryDate" value="${data.entryDate || ''}">
           </div>
           <div class="mb-2">
             <label class="form-label">Sortie</label>
-            <input type="time" class="form-control exitTime" value="${data.exitTime || ''}">
+            <input type="date" class="form-control exitDate" value="${data.exitDate || ''}">
           </div>`;
       } else if (section === 'BT') {
         inner += `
           <div class="mb-2">
             <label class="form-label">Sortie</label>
-            <input type="time" class="form-control exitTime" value="${data.exitTime || ''}">
+            <input type="date" class="form-control exitDate" value="${data.exitDate || ''}">
           </div>`;
       }
 
@@ -293,6 +295,7 @@ async function initWorker(user) {
       col.innerHTML = inner;
       workerSections.appendChild(col);
 
+      // Wire up change handlers
       setTimeout(() => {
         col.querySelector('.desc').onchange   = e =>
           update(ref(db, `tasks/${auth.currentUser.uid}/${section}`), { description: e.target.value });
@@ -302,18 +305,16 @@ async function initWorker(user) {
           update(ref(db, `tasks/${auth.currentUser.uid}/${section}`), { done: e.target.checked });
 
         if (section === 'PV') {
-          col.querySelector('.entryTime').onchange = e =>
-            update(ref(db, `tasks/${auth.currentUser.uid}/${section}`), { entryTime: e.target.value });
-          col.querySelector('.exitTime').onchange  = e =>
-            update(ref(db, `tasks/${auth.currentUser.uid}/${section}`), { exitTime: e.target.value });
+          col.querySelector('.entryDate').onchange = e =>
+            update(ref(db, `tasks/${auth.currentUser.uid}/${section}`), { entryDate: e.target.value });
+          col.querySelector('.exitDate').onchange  = e =>
+            update(ref(db, `tasks/${auth.currentUser.uid}/${section}`), { exitDate: e.target.value });
         } else if (section === 'BT') {
-          col.querySelector('.exitTime').onchange  = e =>
-            update(ref(db, `tasks/${auth.currentUser.uid}/${section}`), { exitTime: e.target.value });
+          col.querySelector('.exitDate').onchange  = e =>
+            update(ref(db, `tasks/${auth.currentUser.uid}/${section}`), { exitDate: e.target.value });
         }
       }, 50);
     });
   });
 }
-
-
 
