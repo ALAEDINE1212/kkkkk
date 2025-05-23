@@ -1,18 +1,11 @@
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/9.22.2/firebase-app.js';
 import {
-  getAuth,
-  signInWithEmailAndPassword,
-  onAuthStateChanged,
-  signOut
+  getAuth, signInWithEmailAndPassword,
+  onAuthStateChanged, signOut
 } from 'https://www.gstatic.com/firebasejs/9.22.2/firebase-auth.js';
 import {
-  getDatabase,
-  ref,
-  onValue,
-  set,
-  update,
-  remove,
-  get
+  getDatabase, ref, onValue,
+  set, update, remove, get
 } from 'https://www.gstatic.com/firebasejs/9.22.2/firebase-database.js';
 
 // Firebase config
@@ -42,24 +35,24 @@ const adminLogout    = document.getElementById('admin-logout');
 const workerLogout   = document.getElementById('worker-logout');
 const workerBack     = document.getElementById('worker-back');
 
-const backAdminBtn   = document.getElementById('back-admin');
-const editorTitle    = document.getElementById('editor-title');
-const editorSections = document.getElementById('editor-sections');
-const saveBoxTasksBtn= document.getElementById('save-box-tasks');
-const saveSuccess    = document.getElementById('saveSuccess');
-const statusTableBody= document.querySelector('#status-table tbody');
+const backAdminBtn     = document.getElementById('back-admin');
+const editorTitle      = document.getElementById('editor-title');
+const editorSections   = document.getElementById('editor-sections');
+const saveBoxTasksBtn  = document.getElementById('save-box-tasks');
+const saveSuccess      = document.getElementById('saveSuccess');
+const statusTableBody  = document.querySelector('#status-table tbody');
 
 const workerBoxLabel = document.getElementById('worker-box-label');
 const workerSections = document.getElementById('worker-sections');
 
-// Helper to show a page
+// Show/hide pages
 function showPage(pg) {
   [loginPage, adminPage, workerPage, boxEditorPage]
     .forEach(el => el.classList.add('d-none'));
   pg.classList.remove('d-none');
 }
 
-// Auth listener
+// Auth state
 onAuthStateChanged(auth, user => {
   if (!user) return showPage(loginPage);
   onValue(ref(db, `users/${user.uid}`), snap => {
@@ -70,7 +63,7 @@ onAuthStateChanged(auth, user => {
   });
 });
 
-// Login handler
+// Login
 loginForm.addEventListener('submit', e => {
   e.preventDefault();
   loginErr.classList.add('d-none');
@@ -83,19 +76,19 @@ loginForm.addEventListener('submit', e => {
   });
 });
 
-// Logout/Back handlers
-if (adminLogout)  adminLogout.onclick  = () => signOut(auth);
+// Logout
+if (adminLogout) adminLogout.onclick = () => signOut(auth);
 if (workerLogout) workerLogout.onclick = () => signOut(auth);
 if (workerBack)   workerBack.onclick   = () => signOut(auth);
 
-// Admin Dashboard (unchanged)
+// Admin Dashboard
 function initAdmin() {
   showPage(adminPage);
   ['nettoyage','gardiennage'].forEach(type => {
     const container = document.getElementById(`${type}-boxes`);
     document.getElementById(`add-${type}`).onclick = () => {
-      const id = Date.now().toString();
-      const label = prompt('Box label:');
+      const id = Date.now().toString(),
+            label = prompt('Box label:');
       if (label) set(ref(db, `boxes/${type}/${id}`), { label });
     };
     onValue(ref(db, `boxes/${type}`), snap => {
@@ -121,9 +114,8 @@ function initAdmin() {
   });
 }
 
-// Box Editor & status (unchanged)
+// Box Editor & Status
 let currentBox = {};
-
 function openBoxEditor(type, id, label) {
   currentBox = { type, id, label };
   editorTitle.textContent = `${label} (${type})`;
@@ -131,17 +123,36 @@ function openBoxEditor(type, id, label) {
   saveSuccess.classList.add('d-none');
   statusTableBody.innerHTML = '';
 
-  ['PV','BT','Congé'].forEach(section => {
+  // Build editor cards with date inputs for PV/BT
+  ['PV','BT','Congé'].forEach((section,i) => {
     const col = document.createElement('div');
     col.className = 'col-md-4 mb-4';
-    col.innerHTML = `
-      <div class="card h-100 shadow-sm fade-in">
-        <div class="card-header text-center fw-bold">${section}</div>
-        <div class="card-body">
-          <textarea class="form-control mb-2 desc" rows="2" placeholder="Description"></textarea>
-          <input type="number" class="form-control remain" placeholder="Remaining">
+    let inner = `<div class="card h-100 shadow-sm fade-in">
+      <div class="card-header text-center fw-bold">${section}</div>
+      <div class="card-body">
+        <textarea class="form-control mb-2 desc" rows="2" placeholder="Description"></textarea>
+        <input type="number" class="form-control remain" placeholder="Remaining">`;
+
+    if (section === 'PV') {
+      inner += `
+        <div class="mb-2">
+          <label class="form-label">Entrée</label>
+          <input type="date" class="form-control entryDate">
         </div>
-      </div>`;
+        <div class="mb-2">
+          <label class="form-label">Sortie</label>
+          <input type="date" class="form-control exitDate">
+        </div>`;
+    } else if (section === 'BT') {
+      inner += `
+        <div class="mb-2">
+          <label class="form-label">Sortie</label>
+          <input type="date" class="form-control exitDate">
+        </div>`;
+    }
+
+    inner += `</div></div>`;
+    col.innerHTML = inner;
     editorSections.appendChild(col);
   });
 
@@ -152,101 +163,104 @@ function openBoxEditor(type, id, label) {
 backAdminBtn.onclick = () => showPage(adminPage);
 
 saveBoxTasksBtn.onclick = async () => {
-  const { type, id } = currentBox;
-  const usnap = await get(ref(db, 'users'));
-  const users = usnap.val() || {};
+  const { type,id } = currentBox;
+  const usnap = await get(ref(db,'users'));
+  const users = usnap.val()||{};
 
-  editorSections.querySelectorAll('.col-md-4').forEach((col, i) => {
+  editorSections.querySelectorAll('.col-md-4').forEach((col,i) => {
     const section = ['PV','BT','Congé'][i];
     const desc   = col.querySelector('.desc').value;
     const remain = +col.querySelector('.remain').value;
+    const entryDate = section === 'PV'
+      ? col.querySelector('.entryDate').value : undefined;
+    const exitDate = col.querySelector('.exitDate').value;
+
     for (const uid in users) {
       const u = users[uid];
-      if (u.role === 'worker' && u.boxType === type && u.boxId === id) {
-        update(ref(db, `tasks/${uid}/${section}`), {
-          description: desc,
-          remaining: remain,
-          done: false
-        });
+      if (u.role==='worker'&&u.boxType===type&&u.boxId===id) {
+        const updates = { description:desc, remaining:remain, done:false };
+        if (entryDate!==undefined) updates.entryDate = entryDate;
+        updates.exitDate = exitDate;
+        update(ref(db,`tasks/${uid}/${section}`), updates);
       }
     }
   });
 
   saveSuccess.classList.remove('d-none');
-  setTimeout(() => saveSuccess.classList.add('d-none'), 1500);
+  setTimeout(()=>saveSuccess.classList.add('d-none'),1500);
   loadStatus();
 };
 
-// UPDATED loadStatus() with PV/BT done flags
+// loadStatus() unchanged from previous step
+
 async function loadStatus() {
   const { type, id } = currentBox;
   statusTableBody.innerHTML = '';
-  const usnap = await get(ref(db, 'users'));
-  const users = usnap.val() || {};
+  const usnap = await get(ref(db,'users'));
+  const users = usnap.val()||{};
 
   for (const uid in users) {
     const u = users[uid];
-    if (u.role === 'worker' && u.boxType === type && u.boxId === id) {
-      const tsnap = await get(ref(db, `tasks/${uid}`));
-      const tasks = tsnap.val() || {};
+    if (u.role==='worker' && u.boxType===type && u.boxId===id) {
+      const tsnap = await get(ref(db,`tasks/${uid}`));
+      const tasks = tsnap.val()||{};
       const row = document.createElement('tr');
 
       // Name
       const nameCell = document.createElement('td');
       const nameInput = document.createElement('input');
-      nameInput.type = 'text';
-      nameInput.value = u.name || '';
-      nameInput.className = 'form-control form-control-sm';
-      nameInput.onchange = () =>
-        update(ref(db, `users/${uid}`), { name: nameInput.value });
+      nameInput.type='text';
+      nameInput.value=u.name||'';
+      nameInput.className='form-control form-control-sm';
+      nameInput.onchange=()=>update(ref(db,`users/${uid}`),{name:nameInput.value});
       nameCell.appendChild(nameInput);
       row.appendChild(nameCell);
 
       // Phone
-      const phoneCell = document.createElement('td');
-      const phoneInput = document.createElement('input');
-      phoneInput.type = 'tel';
-      phoneInput.value = u.phone || '';
-      phoneInput.className = 'form-control form-control-sm d-inline-block w-auto';
-      const callLink = document.createElement('a');
-      callLink.className = 'btn btn-sm btn-outline-success ms-2';
-      callLink.textContent = '📞';
-      callLink.href = `tel:${u.phone || ''}`;
-      phoneInput.onchange = () => {
-        update(ref(db, `users/${uid}`), { phone: phoneInput.value });
-        callLink.href = `tel:${phoneInput.value}`;
+      const phoneCell=document.createElement('td');
+      const phoneInput=document.createElement('input');
+      phoneInput.type='tel';
+      phoneInput.value=u.phone||'';
+      phoneInput.className='form-control form-control-sm d-inline-block w-auto';
+      const callLink=document.createElement('a');
+      callLink.className='btn btn-sm btn-outline-success ms-2';
+      callLink.textContent='📞';
+      callLink.href=`tel:${u.phone||''}`;
+      phoneInput.onchange=()=>{
+        update(ref(db,`users/${uid}`),{phone:phoneInput.value});
+        callLink.href=`tel:${phoneInput.value}`;
       };
-      phoneCell.append(phoneInput, callLink);
+      phoneCell.append(phoneInput,callLink);
       row.appendChild(phoneCell);
 
       // PV Entrée
-      const entCell = document.createElement('td');
-      entCell.textContent = tasks.PV?.entryDate || '—';
+      const entCell=document.createElement('td');
+      entCell.textContent=tasks.PV?.entryDate||'—';
       row.appendChild(entCell);
 
       // PV Sortie
-      const exitPVCell = document.createElement('td');
-      exitPVCell.textContent = tasks.PV?.exitDate || '—';
+      const exitPVCell=document.createElement('td');
+      exitPVCell.textContent=tasks.PV?.exitDate||'—';
       row.appendChild(exitPVCell);
 
       // PV Done
-      const pvDoneCell = document.createElement('td');
-      pvDoneCell.textContent = tasks.PV?.done ? '✅' : '〰️';
+      const pvDoneCell=document.createElement('td');
+      pvDoneCell.textContent=tasks.PV?.done?'✅':'〰️';
       row.appendChild(pvDoneCell);
 
       // BT Sortie
-      const exitBTCell = document.createElement('td');
-      exitBTCell.textContent = tasks.BT?.exitDate || '—';
+      const exitBTCell=document.createElement('td');
+      exitBTCell.textContent=tasks.BT?.exitDate||'—';
       row.appendChild(exitBTCell);
 
       // BT Done
-      const btDoneCell = document.createElement('td');
-      btDoneCell.textContent = tasks.BT?.done ? '✅' : '〰️';
+      const btDoneCell=document.createElement('td');
+      btDoneCell.textContent=tasks.BT?.done?'✅':'〰️';
       row.appendChild(btDoneCell);
 
       // Congé Done
-      const congCell = document.createElement('td');
-      congCell.textContent = tasks['Congé']?.done ? '✅' : '〰️';
+      const congCell=document.createElement('td');
+      congCell.textContent=tasks['Congé']?.done?'✅':'〰️';
       row.appendChild(congCell);
 
       statusTableBody.appendChild(row);
@@ -254,7 +268,7 @@ async function loadStatus() {
   }
 }
 
-// Worker Dashboard (unchanged since last edit)
+// Worker Dashboard (unchanged)
 async function initWorker(user) {
   const boxSnap = await get(ref(db, `boxes/${user.boxType}/${user.boxId}`));
   const boxLabel = boxSnap.exists()
@@ -335,5 +349,6 @@ async function initWorker(user) {
     });
   });
 }
+
 
 
