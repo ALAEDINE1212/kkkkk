@@ -15,7 +15,7 @@ import {
   get
 } from 'https://www.gstatic.com/firebasejs/9.22.2/firebase-database.js';
 
-// ---- Firebase config ----
+// Firebase config
 const firebaseConfig = {
   apiKey: "AIzaSyD0vilgJtiLB06OrJq1iv3A6NXbEan6j_Y",
   authDomain: "kicknegooss.firebaseapp.com",
@@ -29,7 +29,7 @@ initializeApp(firebaseConfig);
 const auth = getAuth();
 const db   = getDatabase();
 
-// ---- DOM references ----
+// DOM references
 const loginPage      = document.getElementById('login-page');
 const adminPage      = document.getElementById('admin-page');
 const workerPage     = document.getElementById('worker-page');
@@ -52,28 +52,25 @@ const statusTableBody= document.querySelector('#status-table tbody');
 const workerBoxLabel = document.getElementById('worker-box-label');
 const workerSections = document.getElementById('worker-sections');
 
-// ---- Helper to show a page ----
+// Helper to show a page
 function showPage(pg) {
   [loginPage, adminPage, workerPage, boxEditorPage]
     .forEach(el => el.classList.add('d-none'));
   pg.classList.remove('d-none');
 }
 
-// ---- Auth state listener ----
+// Auth listener
 onAuthStateChanged(auth, user => {
   if (!user) return showPage(loginPage);
   onValue(ref(db, `users/${user.uid}`), snap => {
     const data = snap.val();
     if (data?.role === 'admin') initAdmin();
     else if (data?.role === 'worker') initWorker(data);
-    else {
-      signOut(auth);
-      alert('No role assigned');
-    }
+    else { signOut(auth); alert('No role assigned'); }
   });
 });
 
-// ---- Login handler ----
+// Login handler
 loginForm.addEventListener('submit', e => {
   e.preventDefault();
   loginErr.classList.add('d-none');
@@ -86,12 +83,12 @@ loginForm.addEventListener('submit', e => {
   });
 });
 
-// ---- Logout/Back handlers ----
+// Logout/Back handlers
 if (adminLogout)  adminLogout.onclick  = () => signOut(auth);
 if (workerLogout) workerLogout.onclick = () => signOut(auth);
 if (workerBack)   workerBack.onclick   = () => signOut(auth);
 
-// ---- Admin Dashboard ----
+// Admin Dashboard
 function initAdmin() {
   showPage(adminPage);
   ['nettoyage','gardiennage'].forEach(type => {
@@ -124,7 +121,7 @@ function initAdmin() {
   });
 }
 
-// ---- Box Editor & Status ----
+// Box Editor & status
 let currentBox = {};
 
 function openBoxEditor(type, id, label) {
@@ -193,7 +190,7 @@ async function loadStatus() {
       const tasks = tsnap.val() || {};
       const row = document.createElement('tr');
 
-      // Name column
+      // Name
       const nameCell = document.createElement('td');
       const nameInput = document.createElement('input');
       nameInput.type = 'text';
@@ -204,7 +201,7 @@ async function loadStatus() {
       nameCell.appendChild(nameInput);
       row.appendChild(nameCell);
 
-      // Phone column
+      // Phone
       const phoneCell = document.createElement('td');
       const phoneInput = document.createElement('input');
       phoneInput.type = 'tel';
@@ -221,21 +218,33 @@ async function loadStatus() {
       phoneCell.append(phoneInput, callLink);
       row.appendChild(phoneCell);
 
-      // Done columns
-      ['PV','BT','Congé'].forEach(section => {
-        const cell = document.createElement('td');
-        cell.textContent = tasks[section]?.done ? '✅' : '〰️';
-        row.appendChild(cell);
-      });
+      // PV Entrée
+      const entCell = document.createElement('td');
+      entCell.textContent = tasks.PV?.entryDate || '—';
+      row.appendChild(entCell);
+
+      // PV Sortie
+      const exitPVCell = document.createElement('td');
+      exitPVCell.textContent = tasks.PV?.exitDate || '—';
+      row.appendChild(exitPVCell);
+
+      // BT Sortie
+      const exitBTCell = document.createElement('td');
+      exitBTCell.textContent = tasks.BT?.exitDate || '—';
+      row.appendChild(exitBTCell);
+
+      // Congé done
+      const congCell = document.createElement('td');
+      congCell.textContent = tasks['Congé']?.done ? '✅' : '〰️';
+      row.appendChild(congCell);
 
       statusTableBody.appendChild(row);
     }
   }
 }
 
-// ---- Worker Dashboard (with date pickers) ----
+// Worker Dashboard (with date pickers)
 async function initWorker(user) {
-  // Fetch box label
   const boxSnap = await get(ref(db, `boxes/${user.boxType}/${user.boxId}`));
   const boxLabel = boxSnap.exists()
     ? boxSnap.val().label
@@ -253,7 +262,6 @@ async function initWorker(user) {
       const col = document.createElement('div');
       col.className = 'col-md-4 mb-4';
 
-      // Build card with date inputs
       let inner = `<div class="card h-100 shadow-sm fade-in">
         <div class="card-header text-center fw-bold">${section}</div>
         <div class="card-body">
@@ -295,7 +303,6 @@ async function initWorker(user) {
       col.innerHTML = inner;
       workerSections.appendChild(col);
 
-      // Wire up change handlers
       setTimeout(() => {
         col.querySelector('.desc').onchange   = e =>
           update(ref(db, `tasks/${auth.currentUser.uid}/${section}`), { description: e.target.value });
@@ -317,4 +324,5 @@ async function initWorker(user) {
     });
   });
 }
+
 
