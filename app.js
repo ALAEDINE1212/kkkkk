@@ -88,7 +88,7 @@ if (adminLogout)  adminLogout.onclick  = () => signOut(auth);
 if (workerLogout) workerLogout.onclick = () => signOut(auth);
 if (workerBack)   workerBack.onclick   = () => signOut(auth);
 
-// Admin Dashboard
+// Admin Dashboard (unchanged)
 function initAdmin() {
   showPage(adminPage);
   ['nettoyage','gardiennage'].forEach(type => {
@@ -121,7 +121,7 @@ function initAdmin() {
   });
 }
 
-// Box Editor & status
+// Box Editor & status (unchanged)
 let currentBox = {};
 
 function openBoxEditor(type, id, label) {
@@ -177,6 +177,7 @@ saveBoxTasksBtn.onclick = async () => {
   loadStatus();
 };
 
+// UPDATED loadStatus() with PV/BT done flags
 async function loadStatus() {
   const { type, id } = currentBox;
   statusTableBody.innerHTML = '';
@@ -228,12 +229,22 @@ async function loadStatus() {
       exitPVCell.textContent = tasks.PV?.exitDate || '—';
       row.appendChild(exitPVCell);
 
+      // PV Done
+      const pvDoneCell = document.createElement('td');
+      pvDoneCell.textContent = tasks.PV?.done ? '✅' : '〰️';
+      row.appendChild(pvDoneCell);
+
       // BT Sortie
       const exitBTCell = document.createElement('td');
       exitBTCell.textContent = tasks.BT?.exitDate || '—';
       row.appendChild(exitBTCell);
 
-      // Congé done
+      // BT Done
+      const btDoneCell = document.createElement('td');
+      btDoneCell.textContent = tasks.BT?.done ? '✅' : '〰️';
+      row.appendChild(btDoneCell);
+
+      // Congé Done
       const congCell = document.createElement('td');
       congCell.textContent = tasks['Congé']?.done ? '✅' : '〰️';
       row.appendChild(congCell);
@@ -243,7 +254,7 @@ async function loadStatus() {
   }
 }
 
-// Worker Dashboard (with date pickers)
+// Worker Dashboard (unchanged since last edit)
 async function initWorker(user) {
   const boxSnap = await get(ref(db, `boxes/${user.boxType}/${user.boxId}`));
   const boxLabel = boxSnap.exists()
