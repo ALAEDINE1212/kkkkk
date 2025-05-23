@@ -14,7 +14,6 @@
   <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-database.js"></script>
 </head>
 <body class="bg-gradient">
-
   <div class="container py-5">
 
     <!-- LOGIN PAGE -->
@@ -62,18 +61,33 @@
     <div id="box-editor-page" class="d-none fade-in">
       <button id="back-admin" class="btn btn-link mb-3">← Back</button>
       <h2 id="editor-title" class="mb-4 fw-bold"></h2>
+
+      <!-- Only description & remaining -->
       <div class="row g-4" id="editor-sections"></div>
       <button id="save-box-tasks" class="btn btn-primary mt-4 fw-bold">Save Tasks</button>
       <div id="saveSuccess" class="alert alert-success d-none mt-3">Saved!</div>
 
-      <!-- Worker Completion Status -->
-      <h5 class="mt-5">Worker Completion Status</h5>
-      <div class="table-responsive">
-        <table class="table table-sm table-bordered" id="status-table">
+      <!-- Worker Info -->
+      <h5 class="mt-5">Worker Info</h5>
+      <div class="table-responsive mb-3">
+        <table class="table table-sm table-bordered" id="info-table">
           <thead class="table-light">
             <tr>
               <th>Name</th>
               <th>Phone</th>
+              <th>Call</th>
+            </tr>
+          </thead>
+          <tbody></tbody>
+        </table>
+      </div>
+
+      <!-- Task Status -->
+      <h5>Task Status</h5>
+      <div class="table-responsive">
+        <table class="table table-sm table-bordered" id="status-table">
+          <thead class="table-light">
+            <tr>
               <th>PV Entrée</th>
               <th>PV Sortie</th>
               <th>BT Sortie</th>
@@ -102,7 +116,6 @@
 
   </div>
 
-  <!-- Box card template -->
   <template id="box-template">
     <div class="col-md-3 col-sm-6 box-anim">
       <div class="card shadow-sm box-card hover-shadow">
