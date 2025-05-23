@@ -1,16 +1,23 @@
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/9.22.2/firebase-app.js';
 import {
-  getAuth, signInWithEmailAndPassword,
-  onAuthStateChanged, signOut
+  getAuth,
+  signInWithEmailAndPassword,
+  onAuthStateChanged,
+  signOut
 } from 'https://www.gstatic.com/firebasejs/9.22.2/firebase-auth.js';
 import {
-  getDatabase, ref, onValue,
-  set, update, remove, get
+  getDatabase,
+  ref,
+  onValue,
+  set,
+  update,
+  remove,
+  get
 } from 'https://www.gstatic.com/firebasejs/9.22.2/firebase-database.js';
 
-// Initialize Firebase
+// Initialisation Firebase
 const firebaseConfig = {
-  apiKey: "AIzaSyD0vilgJtiLB06OrJq1iv3A6NXbEan6j_Y",
+  apiKey: "...",
   authDomain: "kicknegooss.firebaseapp.com",
   databaseURL: "https://kicknegooss-default-rtdb.firebaseio.com",
   projectId: "kicknegooss",
@@ -22,7 +29,7 @@ initializeApp(firebaseConfig);
 const auth = getAuth();
 const db   = getDatabase();
 
-// DOM references
+// Références DOM
 const loginPage      = document.getElementById('login-page');
 const adminPage      = document.getElementById('admin-page');
 const workerPage     = document.getElementById('worker-page');
@@ -34,37 +41,38 @@ const loginErr       = document.getElementById('loginError');
 const adminLogout    = document.getElementById('admin-logout');
 const workerLogout   = document.getElementById('worker-logout');
 const workerBack     = document.getElementById('worker-back');
+const resetAllBtn    = document.getElementById('reset-all');
 
-const backAdminBtn   = document.getElementById('back-admin');
-const editorTitle    = document.getElementById('editor-title');
-const editorSections = document.getElementById('editor-sections');
-const saveBoxTasksBtn= document.getElementById('save-box-tasks');
-const saveSuccess    = document.getElementById('saveSuccess');
-const infoTableBody  = document.querySelector('#info-table tbody');
-const statusTableBody= document.querySelector('#status-table tbody');
+const backAdminBtn     = document.getElementById('back-admin');
+const editorTitle      = document.getElementById('editor-title');
+const editorSections   = document.getElementById('editor-sections');
+const saveBoxTasksBtn  = document.getElementById('save-box-tasks');
+const saveSuccess      = document.getElementById('saveSuccess');
+const infoTableBody    = document.querySelector('#info-table tbody');
+const statusTableBody  = document.querySelector('#status-table tbody');
 
-const workerBoxLabel = document.getElementById('worker-box-label');
-const workerSections = document.getElementById('worker-sections');
+const workerBoxLabel  = document.getElementById('worker-box-label');
+const workerSections  = document.getElementById('worker-sections');
 
-// Helper: show one page
+// Affiche uniquement la page demandée
 function showPage(pg) {
   [loginPage, adminPage, workerPage, boxEditorPage]
     .forEach(el => el.classList.add('d-none'));
   pg.classList.remove('d-none');
 }
 
-// Auth listener
+// Écouteur d’authentification
 onAuthStateChanged(auth, user => {
   if (!user) return showPage(loginPage);
   onValue(ref(db, `users/${user.uid}`), snap => {
     const me = snap.val() || {};
     if (me.role === 'admin') initAdmin();
     else if (me.role === 'worker') initWorker(me);
-    else { signOut(auth); alert('No role assigned'); }
+    else { signOut(auth); alert('Aucun rôle attribué'); }
   });
 });
 
-// Login
+// Connexion
 loginForm.addEventListener('submit', e => {
   e.preventDefault();
   loginErr.classList.add('d-none');
@@ -77,19 +85,37 @@ loginForm.addEventListener('submit', e => {
   });
 });
 
-// Logout/Back
+// Déconnexion / retour
 if (adminLogout)  adminLogout.onclick  = () => signOut(auth);
 if (workerLogout) workerLogout.onclick = () => signOut(auth);
 if (workerBack)   workerBack.onclick   = () => signOut(auth);
 
-// — Admin Dashboard —
+// — Réinitialiser toutes les tâches —
+resetAllBtn.onclick = async () => {
+  if (!confirm("Voulez-vous vraiment réinitialiser toutes les tâches pour tous les travailleurs ? Cette action est irréversible.")) {
+    return;
+  }
+  const usersSnap = await get(ref(db, 'users'));
+  const users = usersSnap.val() || {};
+  // Supprime le nœud /tasks/{uid} pour chaque utilisateur
+  for (const uid in users) {
+    await remove(ref(db, `tasks/${uid}`));
+  }
+  alert("Toutes les tâches ont été réinitialisées.");
+  // Recharge l’affichage si on était dans l’éditeur de box
+  if (!boxEditorPage.classList.contains('d-none')) {
+    loadStatus();
+  }
+};
+
+// — Tableau de bord Admin —
 function initAdmin() {
   showPage(adminPage);
   ['nettoyage','gardiennage'].forEach(type => {
     const container = document.getElementById(`${type}-boxes`);
     document.getElementById(`add-${type}`).onclick = () => {
-      const id = Date.now().toString();
-      const label = prompt('Box label:');
+      const id = Date.now().toString(),
+            label = prompt('Nom de la box :');
       if (label) set(ref(db, `boxes/${type}/${id}`), { label });
     };
     onValue(ref(db, `boxes/${type}`), snap => {
@@ -100,12 +126,12 @@ function initAdmin() {
         tpl.querySelector('.label').textContent = data.label;
         tpl.querySelector('.edit').onclick = e => {
           e.stopPropagation();
-          const nl = prompt('Rename:', data.label);
+          const nl = prompt('Renommer en :', data.label);
           if (nl) update(ref(db, `boxes/${type}/${id}`), { label: nl });
         };
         tpl.querySelector('.delete').onclick = e => {
           e.stopPropagation();
-          if (confirm('Delete?')) remove(ref(db, `boxes/${type}/${id}`));
+          if (confirm('Supprimer cette box ?')) remove(ref(db, `boxes/${type}/${id}`));
         };
         tpl.querySelector('.card-body').onclick = () =>
           openBoxEditor(type, id, data.label);
@@ -115,13 +141,13 @@ function initAdmin() {
   });
 }
 
-// — Box Editor & Status —
+// — Éditeur de box & statut —
 let currentBox = {};
-function openBoxEditor(type, id, label) {
+async function openBoxEditor(type, id, label) {
   currentBox = { type, id, label };
   editorTitle.textContent = `${label} (${type})`;
 
-  // Editor: only desc & remaining
+  // Construire les cartes : uniquement description & remaining
   editorSections.innerHTML = '';
   ['PV','BT','Congé'].forEach(section => {
     const col = document.createElement('div');
@@ -131,14 +157,14 @@ function openBoxEditor(type, id, label) {
         <div class="card-header text-center fw-bold">${section}</div>
         <div class="card-body">
           <textarea class="form-control mb-2 desc" rows="2" placeholder="Description"></textarea>
-          <input type="number" class="form-control remain" placeholder="Remaining">
+          <input type="number" class="form-control remain" placeholder="Restant">
         </div>
       </div>`;
     editorSections.appendChild(col);
   });
 
   saveSuccess.classList.add('d-none');
-  infoTableBody.innerHTML   = '';
+  infoTableBody.innerHTML = '';
   statusTableBody.innerHTML = '';
   showPage(boxEditorPage);
   loadStatus();
@@ -149,7 +175,7 @@ backAdminBtn.onclick = () => showPage(adminPage);
 saveBoxTasksBtn.onclick = async () => {
   const { type, id } = currentBox;
   const usersSnap = await get(ref(db,'users'));
-  const users = usersSnap.val()||{};
+  const users = usersSnap.val() || {};
 
   editorSections.querySelectorAll('.col-md-4').forEach((col,i) => {
     const section = ['PV','BT','Congé'][i];
@@ -172,7 +198,7 @@ saveBoxTasksBtn.onclick = async () => {
   loadStatus();
 };
 
-// Populate both tables
+// — Charger le statut & infos —
 async function loadStatus() {
   const { type, id } = currentBox;
   const usersSnap = await get(ref(db,'users'));
@@ -184,68 +210,73 @@ async function loadStatus() {
   for (const uid in users) {
     const u = users[uid];
     if (u.role==='worker' && u.boxType===type && u.boxId===id) {
+      // récupérer les tâches
       const tsnap = await get(ref(db, `tasks/${uid}`));
       const tasks = tsnap.val()||{};
 
-      // Worker Info
+      // Ligne Info
       const infoRow = document.createElement('tr');
+      // Nom
       const nameCell = document.createElement('td');
       const nameInput = document.createElement('input');
-      nameInput.type = 'text';
-      nameInput.value = u.name||'';
-      nameInput.className = 'form-control form-control-sm';
-      nameInput.onchange = () =>
-        update(ref(db, `users/${uid}`), { name: nameInput.value });
+      nameInput.type='text';
+      nameInput.value=u.name||'';
+      nameInput.className='form-control form-control-sm';
+      nameInput.onchange=()=>update(ref(db,`users/${uid}`),{name:nameInput.value});
       nameCell.appendChild(nameInput);
       infoRow.appendChild(nameCell);
-
-      const phoneCell = document.createElement('td');
-      const phoneInput = document.createElement('input');
-      phoneInput.type = 'tel';
-      phoneInput.value = u.phone||'';
-      phoneInput.className = 'form-control form-control-sm d-inline-block w-auto';
-      phoneInput.onchange = () =>
-        update(ref(db, `users/${uid}`), { phone: phoneInput.value });
+      // Téléphone
+      const phoneCell=document.createElement('td');
+      const phoneInput=document.createElement('input');
+      phoneInput.type='tel';
+      phoneInput.value=u.phone||'';
+      phoneInput.className='form-control form-control-sm d-inline-block w-auto';
+      phoneInput.onchange=()=>update(ref(db,`users/${uid}`),{phone:phoneInput.value});
       phoneCell.appendChild(phoneInput);
       infoRow.appendChild(phoneCell);
-
-      const callCell = document.createElement('td');
-      const callLink = document.createElement('a');
-      callLink.className = 'btn btn-sm btn-outline-success';
-      callLink.textContent = '📞';
-      callLink.href = `tel:${u.phone||''}`;
+      // Appel
+      const callCell=document.createElement('td');
+      const callLink=document.createElement('a');
+      callLink.className='btn btn-sm btn-outline-success';
+      callLink.textContent='📞';
+      callLink.href=`tel:${u.phone||''}`;
       callCell.appendChild(callLink);
       infoRow.appendChild(callCell);
-
       infoTableBody.appendChild(infoRow);
 
-      // Task Status
-      const statRow = document.createElement('tr');
-      ['entryDate','exitDate'].forEach(key => {
-        const cell = document.createElement('td');
-        cell.textContent = tasks.PV?.[key] || '—';
-        statRow.appendChild(cell);
-      });
-      ['exitDate'].forEach(_ => { /* BT sortie */
-        const cell = document.createElement('td');
-        cell.textContent = tasks.BT?.exitDate || '—';
-        statRow.appendChild(cell);
-      });
-      ['done','done','done'].forEach((fld,i) => {
-        const cell = document.createElement('td');
-        const section = ['PV','BT','Congé'][i];
-        cell.textContent = tasks[section]?.done ? '✅' : '〰️';
-        statRow.appendChild(cell);
+      // Ligne Statut
+      const statRow=document.createElement('tr');
+      ['PV','BT','Congé'].forEach(sec=>{
+        // Date(s)
+        if(sec==='PV'){
+          const entCell=document.createElement('td');
+          entCell.textContent=tasks.PV?.entryDate||'—';
+          statRow.appendChild(entCell);
+          const exitPVCell=document.createElement('td');
+          exitPVCell.textContent=tasks.PV?.exitDate||'—';
+          statRow.appendChild(exitPVCell);
+        }
+        if(sec==='BT'){
+          const exitBTCell=document.createElement('td');
+          exitBTCell.textContent=tasks.BT?.exitDate||'—';
+          statRow.appendChild(exitBTCell);
+        }
+        // Done
+        const doneCell=document.createElement('td');
+        doneCell.textContent=tasks[sec]?.done?'✅':'〰️';
+        statRow.appendChild(doneCell);
       });
       statusTableBody.appendChild(statRow);
     }
   }
 }
 
-// — Worker Dashboard —
+// — Tableau de bord Travailleur (inchangé) —
 async function initWorker(user) {
   const boxSnap = await get(ref(db, `boxes/${user.boxType}/${user.boxId}`));
-  const boxLabel = boxSnap.exists() ? boxSnap.val().label : `${user.boxType} Box ${user.boxId}`;
+  const boxLabel = boxSnap.exists()
+    ? boxSnap.val().label
+    : `${user.boxType} Box ${user.boxId}`;
 
   showPage(workerPage);
   workerBoxLabel.textContent = boxLabel;
@@ -266,12 +297,12 @@ async function initWorker(user) {
             <input type="text" class="form-control desc" value="${data.description||''}">
           </div>
           <div class="mb-2">
-            <label class="form-label">Remaining</label>
+            <label class="form-label">Restant</label>
             <input type="number" class="form-control remain" value="${data.remaining||0}">
           </div>`;
 
       if (section==='PV') {
-        inner += `
+        inner+=`
           <div class="mb-2">
             <label class="form-label">Entrée</label>
             <input type="date" class="form-control entryDate" value="${data.entryDate||''}">
@@ -280,15 +311,15 @@ async function initWorker(user) {
             <label class="form-label">Sortie</label>
             <input type="date" class="form-control exitDate" value="${data.exitDate||''}">
           </div>`;
-      } else if (section==='BT') {
-        inner += `
+      } else if(section==='BT'){
+        inner+=`
           <div class="mb-2">
             <label class="form-label">Sortie</label>
             <input type="date" class="form-control exitDate" value="${data.exitDate||''}">
           </div>`;
       }
 
-      inner += `
+      inner+=`
           <div class="form-check mt-3">
             <input type="checkbox" class="form-check-input done" ${data.done?'checked':''}>
             <label class="form-check-label">Done</label>
@@ -296,27 +327,20 @@ async function initWorker(user) {
         </div>
       </div>`;
 
-      col.innerHTML = inner;
+      col.innerHTML=inner;
       workerSections.appendChild(col);
 
-      setTimeout(() => {
-        col.querySelector('.desc').onchange   = e =>
-          update(ref(db, `tasks/${auth.currentUser.uid}/${section}`), { description: e.target.value });
-        col.querySelector('.remain').onchange = e =>
-          update(ref(db, `tasks/${auth.currentUser.uid}/${section}`), { remaining: +e.target.value });
-        col.querySelector('.done').onchange   = e =>
-          update(ref(db, `tasks/${auth.currentUser.uid}/${section}`), { done: e.target.checked });
-
-        if (section==='PV') {
-          col.querySelector('.entryDate').onchange = e =>
-            update(ref(db, `tasks/${auth.currentUser.uid}/${section}`), { entryDate: e.target.value });
-          col.querySelector('.exitDate').onchange  = e =>
-            update(ref(db, `tasks/${auth.currentUser.uid}/${section}`), { exitDate: e.target.value });
-        } else if (section==='BT') {
-          col.querySelector('.exitDate').onchange  = e =>
-            update(ref(db, `tasks/${auth.currentUser.uid}/${section}`), { exitDate: e.target.value });
+      setTimeout(()=>{
+        col.querySelector('.desc').onchange   = e=>update(ref(db,`tasks/${auth.currentUser.uid}/${section}`),{description:e.target.value});
+        col.querySelector('.remain').onchange = e=>update(ref(db,`tasks/${auth.currentUser.uid}/${section}`),{remaining:+e.target.value});
+        col.querySelector('.done').onchange   = e=>update(ref(db,`tasks/${auth.currentUser.uid}/${section}`),{done:e.target.checked});
+        if(section==='PV'){
+          col.querySelector('.entryDate').onchange=e=>update(ref(db,`tasks/${auth.currentUser.uid}/${section}`),{entryDate:e.target.value});
+          col.querySelector('.exitDate').onchange =e=>update(ref(db,`tasks/${auth.currentUser.uid}/${section}`),{exitDate:e.target.value});
+        } else if(section==='BT'){
+          col.querySelector('.exitDate').onchange =e=>update(ref(db,`tasks/${auth.currentUser.uid}/${section}`),{exitDate:e.target.value});
         }
-      }, 50);
+      },50);
     });
   });
 }
