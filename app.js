@@ -1,11 +1,18 @@
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/9.22.2/firebase-app.js';
 import {
-  getAuth, signInWithEmailAndPassword,
-  onAuthStateChanged, signOut
+  getAuth,
+  signInWithEmailAndPassword,
+  onAuthStateChanged,
+  signOut
 } from 'https://www.gstatic.com/firebasejs/9.22.2/firebase-auth.js';
 import {
-  getDatabase, ref, onValue,
-  set, update, remove, get
+  getDatabase,
+  ref,
+  onValue,
+  set,
+  update,
+  remove,
+  get
 } from 'https://www.gstatic.com/firebasejs/9.22.2/firebase-database.js';
 
 // Firebase config
@@ -35,19 +42,20 @@ const adminLogout    = document.getElementById('admin-logout');
 const workerLogout   = document.getElementById('worker-logout');
 const workerBack     = document.getElementById('worker-back');
 
-const backAdminBtn     = document.getElementById('back-admin');
-const editorTitle      = document.getElementById('editor-title');
-const editorSections   = document.getElementById('editor-sections');
-const saveBoxTasksBtn  = document.getElementById('save-box-tasks');
-const saveSuccess      = document.getElementById('saveSuccess');
-const statusTableBody  = document.querySelector('#status-table tbody');
+const backAdminBtn    = document.getElementById('back-admin');
+const editorTitle     = document.getElementById('editor-title');
+const editorSections  = document.getElementById('editor-sections');
+const saveBoxTasksBtn = document.getElementById('save-box-tasks');
+const saveSuccess     = document.getElementById('saveSuccess');
+const statusTableBody = document.querySelector('#status-table tbody');
 
-const workerBoxLabel = document.getElementById('worker-box-label');
-const workerSections = document.getElementById('worker-sections');
+const workerBoxLabel  = document.getElementById('worker-box-label');
+const workerSections  = document.getElementById('worker-sections');
 
-// Show/hide
+// Page toggler
 function showPage(pg) {
-  [loginPage, adminPage, workerPage, boxEditorPage].forEach(el => el.classList.add('d-none'));
+  [loginPage, adminPage, workerPage, boxEditorPage]
+    .forEach(el => el.classList.add('d-none'));
   pg.classList.remove('d-none');
 }
 
@@ -56,13 +64,13 @@ onAuthStateChanged(auth, user => {
   if (!user) return showPage(loginPage);
   onValue(ref(db, `users/${user.uid}`), snap => {
     const data = snap.val();
-    if (data.role === 'admin') initAdmin();
-    else if (data.role === 'worker') initWorker(data);
+    if (data?.role === 'admin') initAdmin();
+    else if (data?.role === 'worker') initWorker(data);
     else { signOut(auth); alert('No role assigned'); }
   });
 });
 
-// Login
+// Login handler
 loginForm.addEventListener('submit', e => {
   e.preventDefault();
   loginErr.classList.add('d-none');
@@ -75,18 +83,19 @@ loginForm.addEventListener('submit', e => {
   });
 });
 
-// Logout
+// Logout/back
 if (adminLogout)  adminLogout.onclick  = () => signOut(auth);
 if (workerLogout) workerLogout.onclick = () => signOut(auth);
 if (workerBack)   workerBack.onclick   = () => signOut(auth);
 
-// Admin dashboard
+// — Admin Dashboard —
 function initAdmin() {
   showPage(adminPage);
   ['nettoyage','gardiennage'].forEach(type => {
     const container = document.getElementById(`${type}-boxes`);
     document.getElementById(`add-${type}`).onclick = () => {
-      const id = Date.now().toString(), label = prompt('Box label:');
+      const id = Date.now().toString(),
+            label = prompt('Box label:');
       if (label) set(ref(db, `boxes/${type}/${id}`), { label });
     };
     onValue(ref(db, `boxes/${type}`), snap => {
@@ -104,14 +113,15 @@ function initAdmin() {
           e.stopPropagation();
           if (confirm('Delete?')) remove(ref(db, `boxes/${type}/${id}`));
         };
-        tpl.querySelector('.card-body').onclick = () => openBoxEditor(type, id, data.label);
+        tpl.querySelector('.card-body').onclick = () =>
+          openBoxEditor(type, id, data.label);
         container.appendChild(tpl);
       });
     });
   });
 }
 
-// Box editor & status
+// — Box Editor & Status —
 let currentBox = {};
 function openBoxEditor(type, id, label) {
   currentBox = { type, id, label };
@@ -159,17 +169,16 @@ function openBoxEditor(type, id, label) {
 backAdminBtn.onclick = () => showPage(adminPage);
 
 saveBoxTasksBtn.onclick = async () => {
-  const { type,id } = currentBox;
+  const { type, id } = currentBox;
   const usersSnap = await get(ref(db,'users'));
   const users = usersSnap.val()||{};
 
   editorSections.querySelectorAll('.col-md-4').forEach((col,i) => {
     const section = ['PV','BT','Congé'][i];
-    const desc   = col.querySelector('.desc').value;
-    const remain = +col.querySelector('.remain').value;
+    const desc      = col.querySelector('.desc').value;
+    const remain    = +col.querySelector('.remain').value;
     const entryDate = section==='PV' ? col.querySelector('.entryDate').value : undefined;
     const exitDate  = col.querySelector('.exitDate').value;
-
     for (const uid in users) {
       const u = users[uid];
       if (u.role==='worker' && u.boxType===type && u.boxId===id) {
@@ -186,7 +195,7 @@ saveBoxTasksBtn.onclick = async () => {
   loadStatus();
 }
 
-// Reverted loadStatus(): only Done columns
+// Status table: dates (read-only) + done flags
 async function loadStatus() {
   const { type, id } = currentBox;
   statusTableBody.innerHTML = '';
@@ -227,6 +236,21 @@ async function loadStatus() {
       phoneCell.append(phoneInput,callLink);
       row.appendChild(phoneCell);
 
+      // PV Entrée (read-only)
+      const entCell=document.createElement('td');
+      entCell.textContent=tasks.PV?.entryDate||'—';
+      row.appendChild(entCell);
+
+      // PV Sortie (read-only)
+      const exitPVCell=document.createElement('td');
+      exitPVCell.textContent=tasks.PV?.exitDate||'—';
+      row.appendChild(exitPVCell);
+
+      // BT Sortie (read-only)
+      const exitBTCell=document.createElement('td');
+      exitBTCell.textContent=tasks.BT?.exitDate||'—';
+      row.appendChild(exitBTCell);
+
       // PV Done
       const pvCell=document.createElement('td');
       pvCell.textContent=tasks.PV?.done?'✅':'〰️';
@@ -247,10 +271,12 @@ async function loadStatus() {
   }
 }
 
-// Worker Dashboard (unchanged)
+// — Worker Dashboard —
 async function initWorker(user) {
   const boxSnap = await get(ref(db, `boxes/${user.boxType}/${user.boxId}`));
-  const boxLabel = boxSnap.exists() ? boxSnap.val().label : `${user.boxType} Box ${user.boxId}`;
+  const boxLabel = boxSnap.exists()
+    ? boxSnap.val().label
+    : `${user.boxType} Box ${user.boxId}`;
 
   showPage(workerPage);
   workerBoxLabel.textContent = boxLabel;
@@ -259,62 +285,69 @@ async function initWorker(user) {
   onValue(ref(db, `tasks/${auth.currentUser.uid}`), snap => {
     workerSections.innerHTML = '';
     ['PV','BT','Congé'].forEach(section => {
-      const data = snap.val()?.[section]||{};
+      const data = snap.val()?.[section] || {};
       const col = document.createElement('div');
       col.className = 'col-md-4 mb-4';
+
       let inner = `<div class="card h-100 shadow-sm fade-in">
         <div class="card-header text-center fw-bold">${section}</div>
         <div class="card-body">
           <div class="mb-2">
             <label class="form-label">Description</label>
-            <input type="text" class="form-control desc" value="${data.description||''}">
+            <input type="text" class="form-control desc" value="${data.description || ''}">
           </div>
           <div class="mb-2">
             <label class="form-label">Remaining</label>
-            <input type="number" class="form-control remain" value="${data.remaining||0}">
+            <input type="number" class="form-control remain" value="${data.remaining || 0}">
           </div>`;
 
-      if (section==='PV') {
-        inner+=`
+      if (section === 'PV') {
+        inner += `
           <div class="mb-2">
             <label class="form-label">Entrée</label>
-            <input type="date" class="form-control entryDate" value="${data.entryDate||''}">
+            <input type="date" class="form-control entryDate" value="${data.entryDate || ''}">
           </div>
           <div class="mb-2">
             <label class="form-label">Sortie</label>
-            <input type="date" class="form-control exitDate" value="${data.exitDate||''}">
+            <input type="date" class="form-control exitDate" value="${data.exitDate || ''}">
           </div>`;
-      } else if (section==='BT') {
-        inner+=`
+      } else if (section === 'BT') {
+        inner += `
           <div class="mb-2">
             <label class="form-label">Sortie</label>
-            <input type="date" class="form-control exitDate" value="${data.exitDate||''}">
+            <input type="date" class="form-control exitDate" value="${data.exitDate || ''}">
           </div>`;
       }
 
-      inner+=`
+      inner += `
           <div class="form-check mt-3">
-            <input type="checkbox" class="form-check-input done" ${data.done?'checked':''}>
+            <input type="checkbox" class="form-check-input done" ${data.done ? 'checked' : ''}>
             <label class="form-check-label">Done</label>
           </div>
         </div>
       </div>`;
-      col.innerHTML=inner;
+
+      col.innerHTML = inner;
       workerSections.appendChild(col);
 
-      setTimeout(()=>{
-        col.querySelector('.desc').onchange   = e=>update(ref(db,`tasks/${auth.currentUser.uid}/${section}`),{description:e.target.value});
-        col.querySelector('.remain').onchange = e=>update(ref(db,`tasks/${auth.currentUser.uid}/${section}`),{remaining:+e.target.value});
-        col.querySelector('.done').onchange   = e=>update(ref(db,`tasks/${auth.currentUser.uid}/${section}`),{done:e.target.checked});
-        if(section==='PV'){
-          col.querySelector('.entryDate').onchange=e=>update(ref(db,`tasks/${auth.currentUser.uid}/${section}`),{entryDate:e.target.value});
-          col.querySelector('.exitDate').onchange =e=>update(ref(db,`tasks/${auth.currentUser.uid}/${section}`),{exitDate:e.target.value});
-        } else if(section==='BT'){
-          col.querySelector('.exitDate').onchange =e=>update(ref(db,`tasks/${auth.currentUser.uid}/${section}`),{exitDate:e.target.value});
+      setTimeout(() => {
+        col.querySelector('.desc').onchange   = e =>
+          update(ref(db, `tasks/${auth.currentUser.uid}/${section}`), { description: e.target.value });
+        col.querySelector('.remain').onchange = e =>
+          update(ref(db, `tasks/${auth.currentUser.uid}/${section}`), { remaining: +e.target.value });
+        col.querySelector('.done').onchange   = e =>
+          update(ref(db, `tasks/${auth.currentUser.uid}/${section}`), { done: e.target.checked });
+
+        if (section === 'PV') {
+          col.querySelector('.entryDate').onchange = e =>
+            update(ref(db, `tasks/${auth.currentUser.uid}/${section}`), { entryDate: e.target.value });
+          col.querySelector('.exitDate').onchange  = e =>
+            update(ref(db, `tasks/${auth.currentUser.uid}/${section}`), { exitDate: e.target.value });
+        } else if (section === 'BT') {
+          col.querySelector('.exitDate').onchange  = e =>
+            update(ref(db, `tasks/${auth.currentUser.uid}/${section}`), { exitDate: e.target.value });
         }
-      },50);
+      }, 50);
     });
   });
 }
-
-
