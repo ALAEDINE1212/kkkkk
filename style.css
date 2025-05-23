@@ -19,12 +19,38 @@ h2, h3, h4 { letter-spacing: 1px; }
   animation: fadeIn .5s;
 }
 @keyframes fadeIn {
-  from { opacity: 0; transform: translateY(24px);}
-  to   { opacity: 1; transform: translateY(0);}
+  from { opacity: 0; transform: translateY(24px); }
+  to   { opacity: 1; transform: translateY(0); }
 }
 input, textarea { border-radius: 0.7rem !important; }
 .btn { border-radius: 0.6rem !important; }
 .d-none { display: none !important; }
+
+/* Make the status table use a fixed layout */
+#status-table {
+  width: 100%;
+  table-layout: fixed;
+}
+
+/* Give the first column (Name) the lion’s share of the width */
+#status-table th:first-child,
+#status-table td:first-child {
+  width: 40%;
+  white-space: normal;
+  word-break: break-word;
+}
+
+/* Give the Phone column just enough */
+#status-table th:nth-child(2),
+#status-table td:nth-child(2) {
+  width: 25%;
+}
+
+/* The remaining columns (dates & done flags) will share the rest of the space equally */
+#status-table th:nth-child(n+3),
+#status-table td:nth-child(n+3) {
+  /* no explicit width: they auto-divide remaining 35% */
+}
 
 
 
